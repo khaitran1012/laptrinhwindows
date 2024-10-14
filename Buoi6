@@ -1,0 +1,356 @@
+```csharp
+from1
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Drawing.Text;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using Lab05.BUS;
+using Lab05.DAL.Entities;
+
+namespace Lab05
+{
+    public partial class Form1 : Form
+    {
+        private readonly StudentService studentService = new StudentService();
+        private readonly FacultyService facultyService = new FacultyService();
+        public Form1()
+        {
+            InitializeComponent();
+            dgvSinhVien.CellClick += dgvSinhVien_CellClick;
+        }
+        private void BindGrid(List<Student> listStudents)
+        {
+            dgvSinhVien.Rows.Clear();
+            foreach (var item in listStudents)
+            {
+                int index = dgvSinhVien.Rows.Add();
+                dgvSinhVien.Rows[index].Cells[0].Value = item.StudentID;
+                dgvSinhVien.Rows[index].Cells[1].Value = item.FullName;
+                if (item.Faculty != null)
+                    dgvSinhVien.Rows[index].Cells[2].Value = item.Faculty.FacultyName;
+                dgvSinhVien.Rows[index].Cells[3].Value = item.AverageScore + "";
+                if (item.MajorID != null)
+                    dgvSinhVien.Rows[index].Cells[4].Value = item.Major.Name + "";
+                //ShowAvatar(item.Avatar);
+            }
+        }
+        private void setGridViewStyle(DataGridView dgvSinhVien)
+        {
+            dgvSinhVien.BorderStyle = BorderStyle.None;
+            dgvSinhVien.DefaultCellStyle.SelectionBackColor = Color.DarkTurquoise;
+            dgvSinhVien.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+
+            dgvSinhVien.BackgroundColor = Color.White;
+            dgvSinhVien.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            try
+
+            {
+                setGridViewStyle(dgvSinhVien);
+                var listFacultys = facultyService.GetAll();
+                var listStudents = studentService.GetAll();
+                FillFalcultyCombobox(listFacultys);
+                BindGrid(listStudents);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+        private void FillFalcultyCombobox(List<Faculty> listFacultys)
+        {
+            listFacultys.Insert(0, new Faculty());
+            this.cbxKhoa.DataSource = listFacultys;
+            this.cbxKhoa.DisplayMember = "FacultyName";
+            this.cbxKhoa.ValueMember = "FacultyID";
+        }
+
+        private void ckbChuyenNganh_CheckedChanged(object sender, EventArgs e)
+        {
+            var listStudents = new List<Student>();
+            if (this.ckbChuyenNganh.Checked)
+                listStudents = studentService.GetAllHasNoMajor();
+            else
+                listStudents = studentService.GetAll();
+            BindGrid(listStudents);
+        }
+        private void ResetInputFields()
+        {
+            txtMaSV.Clear();
+            txtTenSV.Clear();
+            cbxKhoa.SelectedIndex = -1; // Bỏ chọn combobox
+            txtDTB.Clear();
+            picAvatar.Image = null;
+        }
+        private void dgvSinhVien_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // Kiểm tra xem có dòng nào được chọn hay không
+            if (e.RowIndex >= 0)
+            {
+                // Lấy dòng được chọn
+                DataGridViewRow row = dgvSinhVien.Rows[e.RowIndex];
+
+                // Đổ dữ liệu từ dòng vào các TextBox
+                txtMaSV.Text = row.Cells[0].Value.ToString();   // StudentID
+                txtTenSV.Text = row.Cells[1].Value.ToString();  // FullName
+                cbxKhoa.Text = row.Cells[2].Value.ToString();   // FacultyName
+                txtDTB.Text = row.Cells[3].Value.ToString();    // AverageScore 
+                LoadAvatar(row.Cells[0].Value.ToString());
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            var confirmResult = MessageBox.Show("Bạn có chắc chắn muốn thoát khỏi chương trình? ",
+                                                "Xác nhận thoát",
+                                                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (confirmResult == DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+
+        private void btnThem_Click(object sender, EventArgs e)
+        {
+            using (var db = new StudentModels())
+            {
+                string selectedFacultyName = cbxKhoa.Text;
+                var faculty = db.Faculties.FirstOrDefault(f => f.FacultyName == selectedFacultyName);
+
+                if (faculty != null)
+                {
+                    var newStudent = new Student
+                    {
+                        StudentID = (txtMaSV.Text),
+                        FullName = txtTenSV.Text,
+                        FacultyID = faculty.FacultyID,
+                        AverageScore = double.Parse(txtDTB.Text)
+                    };
+
+
+
+                    if (!string.IsNullOrEmpty(avatarFilePath))
+                    {
+                        string avatarFileName = SaveAvatar(avatarFilePath, txtMaSV.Text);
+                        if (!string.IsNullOrEmpty(avatarFileName))
+                        {
+                            newStudent.Avatar = avatarFileName;
+                        }
+                    }
+                    db.Students.Add(newStudent);
+                    db.SaveChanges();
+
+                    int index = dgvSinhVien.Rows.Add();
+                    dgvSinhVien.Rows[index].Cells[0].Value = newStudent.StudentID;
+                    dgvSinhVien.Rows[index].Cells[1].Value = newStudent.FullName;
+                    dgvSinhVien.Rows[index].Cells[2].Value = faculty.FacultyName;
+                    dgvSinhVien.Rows[index].Cells[3].Value = newStudent.AverageScore.ToString();
+                    
+
+
+                    
+                    avatarFilePath =string.Empty;
+                    ResetInputFields();
+                    MessageBox.Show("Thêm sinh viên thành công", "Thông báo", MessageBoxButtons.OK);
+                    
+                }
+                else
+                {
+                    MessageBox.Show("Khoa không tồn tại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
+
+            }
+        }
+
+        private void btnSua_Click(object sender, EventArgs e)
+        {
+            if (dgvSinhVien.SelectedRows.Count > 0)
+            {
+                // Lấy ID của sinh viên từ dòng được chọn
+                string studentID = dgvSinhVien.SelectedRows[0].Cells[0].Value.ToString();
+
+                using (var db = new StudentModels())
+                {
+                    var student = db.Students.FirstOrDefault(s => s.StudentID == studentID);
+                    if (student != null)
+                    {
+                        student.FullName = txtTenSV.Text;
+                        string selectedFacultyName = cbxKhoa.Text;
+                        var faculty = db.Faculties.FirstOrDefault(f => f.FacultyName == selectedFacultyName);
+                        if (faculty != null)
+                        {
+                            student.FacultyID = faculty.FacultyID;
+                        }
+                        else
+                        {
+                            MessageBox.Show("Khoa không tồn tại.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        student.AverageScore = double.Parse(txtDTB.Text);
+                        db.SaveChanges();
+                        var selectedRow = dgvSinhVien.SelectedRows[0];
+                        selectedRow.Cells[1].Value = student.FullName;
+                        selectedRow.Cells[2].Value = faculty.FacultyName;
+                        selectedRow.Cells[3].Value = student.AverageScore.ToString();
+                        MessageBox.Show("Cập nhật sinh viên thành công!");
+
+                        ResetInputFields();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Không tìm thấy sinh viên.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Vui lòng chọn một sinh viên để chỉnh sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void btnXoa_Click(object sender, EventArgs e)
+        {
+            if (dgvSinhVien.SelectedRows.Count > 0)
+            {
+                string studentID = dgvSinhVien.SelectedRows[0].Cells[0].Value.ToString();
+                var confirmResult = MessageBox.Show("Bạn có chắc muốn xóa sinh viên này?",
+                                                     "Xác nhận xóa",
+                                                     MessageBoxButtons.YesNo,
+                                                     MessageBoxIcon.Question);
+                if (confirmResult == DialogResult.Yes)
+                {
+                    using (var db = new StudentModels())
+                    {
+                        // Tìm sinh viên trong database
+                        var student = db.Students.FirstOrDefault(s => s.StudentID == studentID);
+                        if (student != null)
+                        {
+                            // Xóa sinh viên
+                            db.Students.Remove(student);
+                            db.SaveChanges();
+
+                            // Xóa dòng khỏi DataGridView
+                            dgvSinhVien.Rows.RemoveAt(dgvSinhVien.SelectedRows[0].Index);
+
+                            MessageBox.Show("Đã xóa sinh viên thành công.");
+                            ResetInputFields();
+                        }
+                        else
+                        {
+                            MessageBox.Show("Không tìm thấy sinh viên.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Vui lòng chọn một sinh viên để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        private string avatarFilePath = String.Empty;
+        private void btnThemAnh_Click(object sender, EventArgs e)
+        {
+             using (OpenFileDialog openFileDialog = new OpenFileDialog())
+             {
+                openFileDialog.Filter = "Image File (*.jpg; *.jpeg; *.png)|*.jpg; *.jpeg; *.png";
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    avatarFilePath = openFileDialog.FileName;
+                    picAvatar.Image = Image.FromFile(avatarFilePath);
+                }
+             }
+        }
+        private void LoadAvatar(string studentId)
+        {
+            string folderPath = Path.Combine(Application.StartupPath, "Images");
+            var student = studentService.FindByID(studentId);
+            if (student != null && !string.IsNullOrEmpty(student.Avatar))
+            {
+                string avatarFilePath = Path.Combine(folderPath, student.Avatar);
+                if (File.Exists(avatarFilePath))
+                {
+                    picAvatar.Image = Image.FromFile(avatarFilePath);
+                }
+                else
+                {
+                    picAvatar.Image = null;
+                }
+            }
+        }
+        private string SaveAvatar(string sourceFilePath, string studentId)
+        {
+            try
+            {
+                string folderPath = Path.Combine(Application.StartupPath, "Images");
+                if (!Directory.Exists(sourceFilePath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+                string fileExtension = Path.GetExtension(sourceFilePath);
+                string targetFilePath = Path.Combine(folderPath, $"{studentId}{fileExtension}");
+                if (!File.Exists(sourceFilePath)) 
+                {
+                    throw new FileNotFoundException($"Không tìm thấy file: {sourceFilePath}");
+                }
+                File.Copy(sourceFilePath, targetFilePath, true);
+                return $"{studentId}{fileExtension}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving avatar: {ex.Message}","Error",MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
+            }
+        }
+    }
+}
+
+StudentModels
+using System;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.Entity;
+using System.Linq;
+
+namespace Lab05.DAL.Entities
+{
+    public partial class StudentModels : DbContext
+    {
+        public StudentModels()
+            : base("name=StudentModels")
+        {
+        }
+
+        public virtual DbSet<Faculty> Faculties { get; set; }
+        public virtual DbSet<Major> Majors { get; set; }
+        public virtual DbSet<Student> Students { get; set; }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Faculty>()
+                .HasMany(e => e.Majors)
+                .WithRequired(e => e.Faculty)
+                .WillCascadeOnDelete(false);
+
+            modelBuilder.Entity<Major>()
+                .HasMany(e => e.Students)
+                .WithOptional(e => e.Major)
+                .HasForeignKey(e => new { e.FacultyID, e.MajorID });
+
+            modelBuilder.Entity<Student>()
+                .Property(e => e.StudentID)
+                .IsFixedLength();
+        }
+    }
+}
+
+
