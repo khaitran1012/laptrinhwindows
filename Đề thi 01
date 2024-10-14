@@ -1,0 +1,336 @@
+```csharp
+using baitapgiuaky.Models;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+using System.Xml.Linq;
+
+namespace baitapgiuaky
+{
+    public partial class frmSinhvien : Form
+    {
+        Entities models = new Entities();
+
+        public frmSinhvien()
+        {
+            InitializeComponent();
+        }
+
+        // Hàm load danh sách sinh viên
+        private void LoadStudentList()
+        {
+            var N = models.Sinhvien.ToList();
+            dtgvSinhvien.DataSource = N;
+        }
+
+        // Hàm load danh sách lớp học vào Combobox
+        private void LoadClassList()
+        {
+            List<string> classList = GetClassList();
+            cboLop.Items.Clear();
+            cboLop.Items.AddRange(classList.ToArray());
+        }
+
+        private void frmSV_Load(object sender, EventArgs e)
+        {
+
+            LoadStudentList();
+            LoadClassList();
+            LoadLopHoc();
+        }
+        public void LoadLopHoc()
+        {
+
+            {
+                // Lấy danh sách lớp từ cơ sở dữ liệu
+                var lopHocList = models.Lop.ToList();
+
+                if (lopHocList == null || lopHocList.Count == 0)
+                {
+                    MessageBox.Show("Không có dữ liệu lớp học", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Gán dữ liệu vào ComboBox
+                cboLop.DataSource = lopHocList;
+
+                // Gán giá trị hiển thị là tên lớp
+                cboLop.DisplayMember = "TenLop";
+
+                // Gán giá trị thực tế là mã lớp
+                cboLop.ValueMember = "MaLop";
+            }
+
+        }
+        // Hàm xử lý sự kiện chọn lớp trong ComboBox
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Xử lý khi lớp được chọn (nếu cần)
+        }
+
+        // Sự kiện khi click vào cell trong DataGridView
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        // Sự kiện khi chọn dòng trong DataGridView
+        private void dataGridView1_SelectionChanged(object sender, EventArgs e)
+        {
+            if (dtgvSinhvien.CurrentRow != null)
+            {
+                DataGridViewRow selectedRow = dtgvSinhvien.CurrentRow;
+
+                // Hiển thị dữ liệu lên các control
+                txtMaSV.Text = selectedRow.Cells[0].Value.ToString();
+                txtHotenSV.Text = selectedRow.Cells[1].Value.ToString();
+                dtNgaysinh.Value = DateTime.Parse(selectedRow.Cells[2].Value.ToString());
+                cboLop.Text = selectedRow.Cells[3].Value.ToString();
+
+
+            }
+        }
+
+        // Nút thêm mới sinh viên
+        private void btnThem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        // Hàm để xóa các dữ liệu trên form
+
+
+        // Nút sửa thông tin sinh viên
+        private void btnSua_Click(object sender, EventArgs e)
+        {
+        }
+
+        // Nút xóa sinh viên
+        private void btnXoa_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        // Nút lưu dữ liệu sinh viên
+        private void btnLuu_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        // Nút không lưu và hủy thao tác
+        private void btnKhong_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        // Hàm set trạng thái cho các button
+        private void SetButtonState(bool isEnabled)
+        {
+        }
+
+        // Giả sử đây là các lớp để lấy danh sách sinh viên và lớp học
+        private List<Student> GetStudentList()
+        {
+            return new List<Student>
+            {
+                new Student { MaSV = "001", HoTen = "Nguyen Van A", NgaySinh = DateTime.Parse("01/01/2000"), Lop = "CNTT" },
+                new Student { MaSV = "002", HoTen = "Tran Thi B", NgaySinh = DateTime.Parse("02/02/2001"), Lop = "KT" }
+            };
+        }
+
+        private List<string> GetClassList()
+        {
+            return new List<string> { "CNTT", "KT", "QLKD" };
+        }
+
+        private void dtgvSinhvien_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void btThem_Click(object sender, EventArgs e)
+        {
+            if (IsValidInput())
+            {
+                // Thêm sinh viên vào DataGridView
+                dtgvSinhvien.Rows.Add(
+                    txtMaSV.Text,
+                    txtHotenSV.Text,
+                    dtNgaysinh.Value.ToString("dd/MM/yyyy"),
+                    cboLop.Text
+                );
+
+                // Sau khi thêm xong, xóa các ô nhập liệu để người dùng có thể nhập thông tin mới
+                ClearInput();
+
+                // Tắt các nút sửa, xóa vì không có hàng nào được chọn sau khi thêm
+
+
+                // Thông báo thành công
+                MessageBox.Show("Thêm sinh viên thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        // Kiểm tra dữ liệu nhập có hợp lệ không
+        private bool IsValidInput()
+        {
+            if (string.IsNullOrWhiteSpace(txtMaSV.Text) ||
+                string.IsNullOrWhiteSpace(txtHotenSV.Text) ||
+                cboLop.SelectedIndex == -1)
+            {
+                MessageBox.Show("Vui lòng nhập đầy đủ thông tin sinh viên!", "Lỗi nhập liệu", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            return true;
+        }
+
+        // Xóa các ô nhập liệu sau khi thêm xong
+        private void ClearInput()
+        {
+            txtMaSV.Clear();
+            txtHotenSV.Clear();
+            dtNgaysinh.Value = DateTime.Now;
+            cboLop.SelectedIndex = -1;
+        }
+
+        private void cboLop_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btXoa_Click(object sender, EventArgs e)
+        {
+            if (dtgvSinhvien.CurrentRow != null)
+            {
+                // Hiển thị hộp thoại xác nhận
+                DialogResult dialogResult = MessageBox.Show(
+                    "Bạn có chắc chắn muốn xóa sinh viên này không?",
+                    "Xác nhận xóa",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (dialogResult == DialogResult.Yes)
+                {
+
+                    dtgvSinhvien.Rows.Remove(dtgvSinhvien.CurrentRow);
+
+
+                    ClearInput();
+
+
+                    MessageBox.Show("Xóa sinh viên thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            else
+            {
+
+                MessageBox.Show("Vui lòng chọn sinh viên cần xóa!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void btSua_Click(object sender, EventArgs e)
+        {
+            if (dtgvSinhvien.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn sinh viên cần sửa!");
+                return;
+            }
+
+
+            var selectedRow = dtgvSinhvien.SelectedRows[0];
+
+            string maSV = selectedRow.Cells["MaSV"].Value.ToString();
+            var studentToUpdate = models.Sinhvien.FirstOrDefault(s => s.MaSV == maSV);
+
+            if (studentToUpdate != null)
+            {
+                studentToUpdate.HotenSV = txtHotenSV.Text;
+                studentToUpdate.NgaySinh = dtNgaysinh.Value;
+                studentToUpdate.MaLop = cboLop.SelectedValue.ToString();
+
+                models.SaveChanges();
+                LoadStudentList();
+                MessageBox.Show("Cập nhật thông tin sinh viên thành công!");
+            }
+            else
+            {
+                MessageBox.Show("Không tìm thấy sinh viên để cập nhật.");
+            }
+        }
+
+        private void btLuu_Click(object sender, EventArgs e)
+        {
+            if (dtgvSinhvien.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn sinh viên để lưu!");
+                return;
+            }
+
+
+            var selectedRow = dtgvSinhvien.SelectedRows[0];
+            string maSV = selectedRow.Cells["MaSV"].Value.ToString();
+
+            var studentToUpdate = models.Sinhvien.FirstOrDefault(s => s.MaSV == maSV);
+
+            if (studentToUpdate != null)
+            {
+
+                studentToUpdate.HotenSV = txtHotenSV.Text;
+                studentToUpdate.NgaySinh = dtNgaysinh.Value;
+                studentToUpdate.MaLop = cboLop.SelectedValue.ToString();
+
+                try
+                {
+                    models.SaveChanges();
+                    MessageBox.Show("Dữ liệu đã được lưu thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+
+                    LoadStudentList();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Lưu dữ liệu thất bại: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Không tìm thấy sinh viên để cập nhật.");
+            }
+        }
+
+        private void btThoat_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show("Bạn có chắc chắn muốn thoát khỏi ứng dụng?", "Xác nhận thoát", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            // Kiểm tra người dùng đã chọn "Yes"
+            if (result == DialogResult.Yes)
+            {
+                Application.Exit(); // Thoát ứng dụng
+            }
+        }
+
+
+        public class Student
+        {
+            public string MaSV { get; set; }
+            public string HoTen { get; set; }
+            public DateTime NgaySinh { get; set; }
+            public string Lop { get; set; }
+        }
+
+        public class Lop
+        {
+            public string TenLop { get; set; }
+        }
+
+        private void dtgvSinhvien_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+    }
+}
+
+
